@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KVDelta Currents</title>
+  <meta name="description" content="Open, falsifiable KVDelta experiments on public ocean-current data.">
+  <style>
+    :root { color-scheme: light dark; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    body { max-width: 920px; margin: 0 auto; padding: 3rem 1.25rem 5rem; line-height: 1.55; }
+    header { border-bottom: 1px solid currentColor; padding-bottom: 1.5rem; margin-bottom: 2rem; }
+    h1 { font-size: clamp(2rem, 7vw, 4rem); margin: 0 0 .5rem; letter-spacing: -.06em; }
+    h2 { margin-top: 2.4rem; }
+    .tag { display: inline-block; border: 1px solid currentColor; padding: .2rem .5rem; margin-right: .4rem; }
+    .equation { font-size: clamp(1.4rem, 5vw, 2.5rem); margin: 1.5rem 0; }
+    .status { border: 1px solid currentColor; padding: 1rem; }
+    a { color: inherit; }
+    footer { margin-top: 3rem; opacity: .75; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="tag">OPEN RESEARCH</div><div class="tag">OCEAN CURRENTS</div>
+    <h1>KVDelta Currents</h1>
+    <p>Testing KVDelta against public ocean-current archives first, then prospective near-real-time observations.</p>
+  </header>
+
+  <main>
+    <div class="equation">K + Δ → V</div>
+    <p>K is the bounded information known at prediction time. Δ is the additional co-determining dimension. V is the later observable state. The relationship is a hypothesis to test, not an assumed forecasting law.</p>
+
+    <h2>Experiment 001</h2>
+    <p>North Pacific current fields. Predict direction, speed, and virtual-drifter displacement at fixed horizons, then compare against declared baselines.</p>
+
+    <div class="status" id="status">Loading project status…</div>
+
+    <h2>Rules</h2>
+    <p>Chronological splits. Sealed test periods. Mandatory baselines. Negative results remain public. No predictive claim until the method reproduces outside its discovery interval.</p>
+
+    <h2>Planned path</h2>
+    <p>Archive → retrospective test → independent drifter observations → frozen method → near-real-time predictions → later scoring.</p>
+  </main>
+
+  <footer>
+    <p>Source code and experiment definitions live in the GitHub repository. Data retain their original provider licences and attribution requirements.</p>
+  </footer>
+
+  <script>
+    fetch('./status.json')
+      .then(r => r.json())
+      .then(s => {
+        document.getElementById('status').innerHTML =
+          '<strong>' + s.stage + '</strong><br>' +
+          'Predictive claim established: ' + (s.predictive_claim_established ? 'yes' : 'no') + '<br>' +
+          'Region: ' + s.region + '<br>' +
+          'Last build: ' + s.generated_at_utc;
+      })
+      .catch(() => { document.getElementById('status').textContent = 'Status unavailable.'; });
+  </script>
+</body>
+</html>

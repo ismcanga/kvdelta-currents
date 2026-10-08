@@ -1,0 +1,13 @@
+{
+  "project": "KVDelta Currents",
+  "stage": "Stage 0: project definition",
+  "predictive_claim_established": false,
+  "experiment": "Experiment 001",
+  "region": "North Pacific",
+  "baselines": [
+    "persistence",
+    "climatology",
+    "local linear trend"
+  ],
+  "generated_at_utc": "2026-10-08T20:54:34+00:00"
+}

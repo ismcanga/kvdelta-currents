@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: KVDelta Currents
+message: If you use this research project, please cite the repository.
+type: software
+authors:
+  - family-names: Canga
+    given-names: Ismail
+year: 2026
+license: MIT
