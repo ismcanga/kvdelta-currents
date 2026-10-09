@@ -151,7 +151,7 @@ def measurement_window(
                 "timestamp": times[ti].strftime(
                     "%Y-%m-%dT%H:%M:%SZ"
                 ),
-                ""relative_measurement_index": (
+                "relative_measurement_index": (
                     ti - failure_time_index
                 ),
                 "is_calculation_start": (
