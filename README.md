@@ -1,4 +1,4 @@
-# Miring
+# Myrich
 
 An open research project for testing **KVΔ (K-V-Delta)** against public ocean-current data.
 
