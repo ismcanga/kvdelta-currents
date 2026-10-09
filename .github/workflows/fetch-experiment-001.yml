@@ -19,7 +19,7 @@ jobs:
 
       - name: Fetch NOAA North Pacific current field
         run: |
-          curl --fail --location --retry 3 \
+          curl --fail --location --retry 3 --globoff \
             --output artifacts/experiment-001/noaa_north_pacific_2025-01.nc \
             'https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisSSH1day.nc?ugos[(2025-01-01T00:00:00Z):1:(2025-01-31T00:00:00Z)][(20):1:(50)][(140):1:(230)],vgos[(2025-01-01T00:00:00Z):1:(2025-01-31T00:00:00Z)][(20):1:(50)][(140):1:(230)]'
 
