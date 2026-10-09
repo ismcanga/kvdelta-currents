@@ -14,6 +14,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install inspection dependency
+        run: python -m pip install netCDF4 numpy
+
       - name: Create artifact directory
         run: mkdir -p artifacts/experiment-001
 
@@ -45,15 +53,24 @@ jobs:
             "variables": ["ugos", "vgos"],
             "latitude_min": 20.0,
             "latitude_max": 50.0,
-            "longitude_min": 140.0,
-            "longitude_max": 230.0,
+            "longitude_ranges": [
+              [140.0, 179.875],
+              [-179.875, -130.0]
+            ],
             "time_start": "2025-01-01T00:00:00Z",
             "time_end": "2025-01-31T00:00:00Z",
             "nominal_grid_degrees": 0.25,
             "nominal_cadence": "daily",
-            "transformations": []
+            "transformations": [],
+            "native_coordinate_system_preserved": true
           }
           EOF
+
+      - name: Inspect raw acquisition
+        run: python scripts/inspect_experiment_001.py
+
+      - name: Validate inspection JSON
+        run: python -m json.tool artifacts/experiment-001/inspection.json
 
       - name: Upload acquisition artifact
         uses: actions/upload-artifact@v4
