@@ -1,0 +1,57 @@
+name: Fetch Experiment 001
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create artifact directory
+        run: mkdir -p artifacts/experiment-001
+
+      - name: Fetch NOAA North Pacific current field
+        run: |
+          curl --fail --location --retry 3 \
+            --output artifacts/experiment-001/noaa_north_pacific_2025-01.nc \
+            'https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisSSH1day.nc?ugos[(2025-01-01T00:00:00Z):1:(2025-01-31T00:00:00Z)][(20):1:(50)][(140):1:(230)],vgos[(2025-01-01T00:00:00Z):1:(2025-01-31T00:00:00Z)][(20):1:(50)][(140):1:(230)]'
+
+      - name: Record checksum
+        run: |
+          cd artifacts/experiment-001
+          sha256sum noaa_north_pacific_2025-01.nc > SHA256SUMS.txt
+
+      - name: Record provenance
+        run: |
+          cat > artifacts/experiment-001/provenance.json <<'EOF'
+          {
+            "experiment": "001",
+            "source": "NOAA CoastWatch ERDDAP",
+            "dataset_id": "nesdisSSH1day",
+            "dataset_status": "experimental",
+            "variables": ["ugos", "vgos"],
+            "latitude_min": 20.0,
+            "latitude_max": 50.0,
+            "longitude_min": 140.0,
+            "longitude_max": 230.0,
+            "time_start": "2025-01-01T00:00:00Z",
+            "time_end": "2025-01-31T00:00:00Z",
+            "nominal_grid_degrees": 0.25,
+            "nominal_cadence": "daily",
+            "transformations": []
+          }
+          EOF
+
+      - name: Upload acquisition artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: experiment-001-noaa-2025-01
+          path: artifacts/experiment-001/
+          retention-days: 30
