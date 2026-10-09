@@ -69,6 +69,12 @@ jobs:
       - name: Inspect raw acquisition
         run: python scripts/inspect_experiment_001.py
 
+      - name: Build Experiment 001 pair population
+        run: python scripts/build_experiment_001_pairs.py
+
+      - name: Validate pair summary
+        run: python -m json.tool artifacts/experiment-001/pairs_summary.json
+
       - name: Validate inspection JSON
         run: python -m json.tool artifacts/experiment-001/inspection.json
 
