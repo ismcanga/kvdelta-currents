@@ -29,10 +29,10 @@ jobs:
             --output artifacts/experiment-001/noaa_np_east_2025-01.nc \
             'https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisSSH1day.nc?ugos[(2025-01-01T00:00:00Z):1:(2025-01-31T00:00:00Z)][(20):1:(50)][(-179.875):1:(-130)],vgos[(2025-01-01T00:00:00Z):1:(2025-01-31T00:00:00Z)][(20):1:(50)][(-179.875):1:(-130)]'
 
-      - name: Record checksum
+      - name: Record checksums
         run: |
           cd artifacts/experiment-001
-          sha256sum noaa_north_pacific_2025-01.nc > SHA256SUMS.txt
+          sha256sum noaa_np_west_2025-01.nc noaa_np_east_2025-01.nc > SHA256SUMS.txt
 
       - name: Record provenance
         run: |
