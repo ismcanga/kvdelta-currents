@@ -15,9 +15,11 @@ FILES = {
 OUTPUT = ROOT / "failure_localization.json"
 
 REQUIRED_INTERVAL_HOURS = 24.0
-TOP_N_PER_SLICE = 100
-NEIGHBOR_RADIUS = 1
+TOP_N_PER_SLICE = 25
 
+# Measurement support around a failed calculation.
+SPATIAL_RADIUS = 1      # 3x3 grid
+TIME_RADIUS = 2         # t-2 ... t+2
 
 def load_times(ds):
     time_var = ds.variables["time"]
@@ -49,99 +51,124 @@ def speed(u, v):
     return float(np.sqrt(u * u + v * v))
 
 
-def neighbor_context(
+def measurement_window(
+    times,
+    lats,
+    lons,
     ugos,
     vgos,
-    time_index,
-    lat_index,
-    lon_index,
+    failure_time_index,
+    failure_lat_index,
+    failure_lon_index,
 ):
-    lat_start = max(0, lat_index - NEIGHBOR_RADIUS)
+    """
+    Return the raw measurement set surrounding a failed calculation.
+
+    This does not classify the failure and does not infer Delta.
+
+    It preserves a small spatiotemporal window so later calculations
+    can investigate what K failed to account for.
+    """
+
+    time_start = max(
+        0,
+        failure_time_index - TIME_RADIUS,
+    )
+
+    # +1 includes the V endpoint of the failed transition.
+    time_end = min(
+        len(times),
+        failure_time_index + TIME_RADIUS + 2,
+    )
+
+    lat_start = max(
+        0,
+        failure_lat_index - SPATIAL_RADIUS,
+    )
+
     lat_end = min(
-        ugos.shape[1],
-        lat_index + NEIGHBOR_RADIUS + 1,
+        len(lats),
+        failure_lat_index + SPATIAL_RADIUS + 1,
     )
 
-    lon_start = max(0, lon_index - NEIGHBOR_RADIUS)
+    lon_start = max(
+        0,
+        failure_lon_index - SPATIAL_RADIUS,
+    )
+
     lon_end = min(
-        ugos.shape[2],
-        lon_index + NEIGHBOR_RADIUS + 1,
+        len(lons),
+        failure_lon_index + SPATIAL_RADIUS + 1,
     )
 
-    records = []
+    frames = []
 
-    for yi in range(lat_start, lat_end):
-        for xi in range(lon_start, lon_end):
-            if yi == lat_index and xi == lon_index:
-                continue
+    for ti in range(time_start, time_end):
+        cells = []
 
-            u0 = ugos[time_index, yi, xi]
-            v0 = vgos[time_index, yi, xi]
-            u1 = ugos[time_index + 1, yi, xi]
-            v1 = vgos[time_index + 1, yi, xi]
+        for yi in range(lat_start, lat_end):
+            for xi in range(lon_start, lon_end):
+                u = ugos[ti, yi, xi]
+                v = vgos[ti, yi, xi]
 
-            if (
-                np.ma.is_masked(u0)
-                or np.ma.is_masked(v0)
-                or np.ma.is_masked(u1)
-                or np.ma.is_masked(v1)
-            ):
-                records.append(
+                center = (
+                    yi == failure_lat_index
+                    and xi == failure_lon_index
+                )
+
+                if (
+                    np.ma.is_masked(u)
+                    or np.ma.is_masked(v)
+                ):
+                    cells.append(
+                        {
+                            "latitude": float(lats[yi]),
+                            "longitude": float(lons[xi]),
+                            "center": center,
+                            "valid": False,
+                        }
+                    )
+                    continue
+
+                u = float(u)
+                v = float(v)
+
+                cells.append(
                     {
-                        "lat_index": yi,
-                        "lon_index": xi,
-                        "valid": False,
+                        "latitude": float(lats[yi]),
+                        "longitude": float(lons[xi]),
+                        "center": center,
+                        "valid": True,
+                        "ugos_mps": u,
+                        "vgos_mps": v,
+                        "speed_mps": speed(u, v),
+                        "direction_deg": direction_deg(u, v),
                     }
                 )
-                continue
 
-            records.append(
-                {
-                    "lat_index": yi,
-                    "lon_index": xi,
-                    "valid": True,
-                    "vector_error_mps": vector_error(
-                        float(u0),
-                        float(v0),
-                        float(u1),
-                        float(v1),
-                    ),
-                }
-            )
-
-    valid_errors = [
-        r["vector_error_mps"]
-        for r in records
-        if r.get("valid")
-    ]
-
-    if valid_errors:
-        summary = {
-            "valid_neighbor_count": len(valid_errors),
-            "mean_vector_error_mps": float(
-                np.mean(valid_errors)
-            ),
-            "median_vector_error_mps": float(
-                np.median(valid_errors)
-            ),
-            "max_vector_error_mps": float(
-                np.max(valid_errors)
-            ),
-        }
-    else:
-        summary = {
-            "valid_neighbor_count": 0,
-            "mean_vector_error_mps": None,
-            "median_vector_error_mps": None,
-            "max_vector_error_mps": None,
-        }
+        frames.append(
+            {
+                "timestamp": times[ti].strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "relative_index": (
+                    ti - failure_time_index
+                ),
+                "is_K_time": (
+                    ti == failure_time_index
+                ),
+                "is_V_time": (
+                    ti == failure_time_index + 1
+                ),
+                "cells": cells,
+            }
+        )
 
     return {
-        "radius_cells": NEIGHBOR_RADIUS,
-        "summary": summary,
-        "neighbors": records,
+        "spatial_radius_cells": SPATIAL_RADIUS,
+        "time_radius_steps": TIME_RADIUS,
+        "frames": frames,
     }
-
 
 def collect_slice(path: Path):
     with Dataset(path) as ds:
@@ -249,7 +276,7 @@ def collect_slice(path: Path):
                         "lon_index": int(xi),
                         "latitude": float(lats[yi]),
                         "longitude": float(lons[xi]),
-                        "K": {
+                        "measurement_at_t": {
                             "ugos_mps": current_u,
                             "vgos_mps": current_v,
                             "speed_mps": speed(
@@ -261,7 +288,7 @@ def collect_slice(path: Path):
                                 current_v,
                             ),
                         },
-                        "V": {
+                        "measurement_at_t_plus_24h": {
                             "ugos_mps": future_u,
                             "vgos_mps": future_v,
                             "speed_mps": speed(
@@ -294,14 +321,17 @@ def collect_slice(path: Path):
         top = failures[:TOP_N_PER_SLICE]
 
         for item in top:
-            item["neighbor_context"] = neighbor_context(
+            item["measurement_window"] = measurement_window(
+                times,
+                lats,
+                lons,
                 ugos,
                 vgos,
                 item["time_index"],
                 item["lat_index"],
                 item["lon_index"],
             )
-
+            
         return {
             "file": path.name,
             "top_n": len(top),
@@ -318,24 +348,27 @@ slices = {
 summary = {
     "experiment": "001",
     "purpose": (
-        "localize the largest 24-hour persistence failures "
-        "without discarding or explaining them"
+        "identify failed calculation steps and preserve "
+        "the surrounding measurement set needed to investigate "
+        "what calculation was missing"
     ),
     "selection": {
         "top_n_per_slice": TOP_N_PER_SLICE,
         "ranking_metric": "vector_error_mps",
         "required_interval_hours": REQUIRED_INTERVAL_HOURS,
     },
-    "neighbor_context": {
-        "radius_cells": NEIGHBOR_RADIUS,
-        "meaning": (
-            "3x3 neighborhood around the failure cell, "
-            "excluding the center cell"
+    "measurement_support": {
+        "spatial_radius_cells": SPATIAL_RADIUS,
+        "time_radius_steps": TIME_RADIUS,
+        "rule": (
+            "preserve raw surrounding measurements around each "
+            "selected failed calculation; do not infer cause or Delta"
         ),
     },
     "interpretation_rule": (
-        "large error is treated as a reconnaissance lead, "
-        "not as Delta and not as an outlier to remove"
+        "ranking only selects failed calculations for inspection. "
+        "The surrounding measurement window is calculation support. "
+        "Neither the error nor the measurement window is Delta."
     ),
     "transformations_applied": [],
     "slices": slices,
