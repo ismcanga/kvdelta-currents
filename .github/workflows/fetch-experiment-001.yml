@@ -81,6 +81,12 @@ jobs:
       - name: Validate baseline summary
         run: python -m json.tool artifacts/experiment-001/baseline_summary.json
 
+      - name: Localize Experiment 001 failures
+        run: python scripts/localize_failures_experiment_001.py
+
+      - name: Validate failure localization
+        run: python -m json.tool artifacts/experiment-001/failure_localization.json
+
       - name: Validate inspection JSON
         run: python -m json.tool artifacts/experiment-001/inspection.json
 
