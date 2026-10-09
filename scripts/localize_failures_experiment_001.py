@@ -78,7 +78,7 @@ def measurement_window(
     # +1 includes the V endpoint of the failed transition.
     time_end = min(
         len(times),
-        failure_time_index + TIME_RADIUS + 2,
+        failure_time_index + TIME_RADIUS + 1,
     )
 
     lat_start = max(
@@ -151,13 +151,13 @@ def measurement_window(
                 "timestamp": times[ti].strftime(
                     "%Y-%m-%dT%H:%M:%SZ"
                 ),
-                "relative_index": (
+                ""relative_measurement_index": (
                     ti - failure_time_index
                 ),
-                "is_K_time": (
+                "is_calculation_start": (
                     ti == failure_time_index
                 ),
-                "is_V_time": (
+                "is_subsequently_observed": (
                     ti == failure_time_index + 1
                 ),
                 "cells": cells,
@@ -300,13 +300,13 @@ def collect_slice(path: Path):
                                 future_v,
                             ),
                         },
-                        "vector_error_mps": vector_error(
+                        "persistence_vector_miss_mps": vector_error(
                             current_u,
                             current_v,
                             future_u,
                             future_v,
                         ),
-                        "speed_error_mps": abs(
+                        "persistence_speed_miss_mps": abs(
                             speed(future_u, future_v)
                             - speed(current_u, current_v)
                         ),
@@ -314,7 +314,7 @@ def collect_slice(path: Path):
                 )
 
         failures.sort(
-            key=lambda x: x["vector_error_mps"],
+            key=lambda x: x["persistence_vector_miss_mps"],
             reverse=True,
         )
 
@@ -335,7 +335,7 @@ def collect_slice(path: Path):
         return {
             "file": path.name,
             "top_n": len(top),
-            "ranking_metric": "vector_error_mps",
+            "ranking_metric": "persistence_vector_miss_mps",
             "failures": top,
         }
 
@@ -354,7 +354,7 @@ summary = {
     ),
     "selection": {
         "top_n_per_slice": TOP_N_PER_SLICE,
-        "ranking_metric": "vector_error_mps",
+        "ranking_metric": "persistence_vector_miss_mps",
         "required_interval_hours": REQUIRED_INTERVAL_HOURS,
     },
     "measurement_support": {
