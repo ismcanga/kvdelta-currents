@@ -534,10 +534,10 @@ with SITE_OUTPUT.open("w") as f:
     json.dump(
         site_summary,
         f,
-        separators=(",", ":"),
+        indent=2,
     )
     f.write("\n")
-
+    
 print(
     f"{SITE_OUTPUT} generated "
     f"({len(site_failures)} failures)"
