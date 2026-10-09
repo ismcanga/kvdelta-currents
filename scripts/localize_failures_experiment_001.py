@@ -13,6 +13,7 @@ FILES = {
 }
 
 OUTPUT = ROOT / "failure_localization.json"
+SITE_OUTPUT = ROOT / "failure_localization_site.json"
 
 REQUIRED_INTERVAL_HOURS = 24.0
 TOP_N_PER_SLICE = 25
@@ -168,6 +169,88 @@ def measurement_window(
         "spatial_radius_cells": SPATIAL_RADIUS,
         "time_radius_steps": TIME_RADIUS,
         "frames": frames,
+    }
+
+def compact_measurement_window(window):
+    frames = window["frames"]
+
+    if not frames:
+        return {
+            "latitudes": [],
+            "longitudes": [],
+            "frames": [],
+        }
+
+    first_cells = frames[0]["cells"]
+
+    latitudes = list(
+        dict.fromkeys(
+            cell["latitude"]
+            for cell in first_cells
+        )
+    )
+
+    longitudes = list(
+        dict.fromkeys(
+            cell["longitude"]
+            for cell in first_cells
+        )
+    )
+
+    row_count = len(latitudes)
+    column_count = len(longitudes)
+
+    compact_frames = []
+
+    for frame in frames:
+        u_values = []
+        v_values = []
+
+        for cell in frame["cells"]:
+            if cell["valid"]:
+                u_values.append(cell["ugos_mps"])
+                v_values.append(cell["vgos_mps"])
+            else:
+                u_values.append(None)
+                v_values.append(None)
+
+        u_rows = [
+            u_values[i:i + column_count]
+            for i in range(
+                0,
+                row_count * column_count,
+                column_count,
+            )
+        ]
+
+        v_rows = [
+            v_values[i:i + column_count]
+            for i in range(
+                0,
+                row_count * column_count,
+                column_count,
+            )
+        ]
+
+        compact_frame = {
+            "timestamp": frame["timestamp"],
+            "step": frame["relative_measurement_index"],
+            "ugos_mps": u_rows,
+            "vgos_mps": v_rows,
+        }
+
+        if frame["is_calculation_start"]:
+            compact_frame["role"] = "calculation_start"
+
+        if frame["is_subsequently_observed"]:
+            compact_frame["role"] = "subsequently_observed"
+
+        compact_frames.append(compact_frame)
+
+    return {
+        "latitudes": latitudes,
+        "longitudes": longitudes,
+        "frames": compact_frames,
     }
 
 def collect_slice(path: Path):
@@ -400,4 +483,62 @@ print(
         indent=2,
         sort_keys=True,
     )
+)
+
+site_failures = []
+
+for slice_name, slice_data in slices.items():
+    for rank, failure in enumerate(
+        slice_data["failures"],
+        start=1,
+    ):
+        site_failures.append(
+            {
+                "slice": slice_name,
+                "rank": rank,
+                "start": failure["start"],
+                "end": failure["end"],
+                "latitude": failure["latitude"],
+                "longitude": failure["longitude"],
+                "persistence_vector_miss_mps": (
+                    failure["persistence_vector_miss_mps"]
+                ),
+                "measurement_at_t": (
+                    failure["measurement_at_t"]
+                ),
+                "measurement_at_t_plus_24h": (
+                    failure["measurement_at_t_plus_24h"]
+                ),
+                "measurement_window": compact_measurement_window(
+                    failure["measurement_window"]
+                ),
+            }
+        )
+
+site_summary = {
+    "experiment": "001",
+    "source_artifact": "failure_localization.json",
+    "purpose": "compact site projection of selected failed calculations",
+    "cell_measurements": [
+        "ugos_mps",
+        "vgos_mps",
+    ],
+    "derived_for_display": [
+        "speed_mps",
+        "direction_deg",
+    ],
+    "failures": site_failures,
+}
+
+with SITE_OUTPUT.open("w") as f:
+    json.dump(
+        site_summary,
+        f,
+        separators=(",", ":"),
+    )
+    f.write("\n")
+
+print(
+    f"{SITE_OUTPUT} generated "
+    f"({len(site_failures)} failures)"
 )
