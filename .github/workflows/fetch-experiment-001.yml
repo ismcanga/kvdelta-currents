@@ -75,6 +75,12 @@ jobs:
       - name: Validate pair summary
         run: python -m json.tool artifacts/experiment-001/pairs_summary.json
 
+      - name: Run Experiment 001 persistence baseline
+        run: python scripts/baseline_experiment_001.py
+
+      - name: Validate baseline summary
+        run: python -m json.tool artifacts/experiment-001/baseline_summary.json
+
       - name: Validate inspection JSON
         run: python -m json.tool artifacts/experiment-001/inspection.json
 
