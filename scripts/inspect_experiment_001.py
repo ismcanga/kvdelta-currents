@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from netCDF4 import Dataset
+from netCDF4 import Dataset, num2date
 import numpy as np
 
 
@@ -39,6 +39,35 @@ def summarize(path: Path):
         }
 
         time_var = ds.variables["time"]
+
+        decoded_times = num2date(
+            time[:],
+            units=time_var.units,
+            calendar=getattr(time_var, "calendar", "standard"),
+        )
+        
+        iso_times = [
+            t.strftime("%Y-%m-%dT%H:%M:%SZ")
+            for t in decoded_times
+        ]
+        
+        result["coordinates"]["timestamps"] = iso_times
+        
+        gaps_hours = []
+        
+        for previous, current in zip(decoded_times, decoded_times[1:]):
+            delta = current - previous
+            gaps_hours.append(delta.total_seconds() / 3600.0)
+        
+        result["coordinates"]["step_hours"] = gaps_hours
+        result["coordinates"]["all_steps_24h"] = all(
+            abs(hours - 24.0) < 1e-9
+            for hours in gaps_hours
+        )
+
+        result["coordinates"]["time_start"] = iso_times[0]
+        result["coordinates"]["time_end"] = iso_times[-1]
+
         result["coordinates"]["time_units"] = getattr(
             time_var, "units", None
         )
