@@ -1,4 +1,4 @@
-# KVDelta Currents
+# Miring
 
 An open research project for testing **KVΔ (K-V-Delta)** against public ocean-current data.
 
@@ -102,7 +102,7 @@ This turns the project from retrospective fitting into a public prospective test
 ## Proposed layout
 
 ```text
-kvdelta-currents/
+myrich/
 ├── README.md
 ├── LICENSE
 ├── CITATION.cff
