@@ -215,10 +215,7 @@ def describe_frame(frame):
     )
 
     return {
-        "timestamp": frame["timestamp"],
         "step": frame["step"],
-        "role": frame.get("role"),
-        "valid_cell_count": len(vectors),
         "mean_u_mps": mean_u,
         "mean_v_mps": mean_v,
         "mean_speed_mps": mean(speeds),
@@ -265,15 +262,6 @@ def describe_failure(failure):
     return {
         "slice": failure["slice"],
         "rank": failure["rank"],
-        "start": failure["start"],
-        "end": failure["end"],
-        "latitude": failure["latitude"],
-        "longitude": failure["longitude"],
-        "persistence_vector_miss_mps": (
-            failure[
-                "persistence_vector_miss_mps"
-            ]
-        ),
         "frames": frames,
     }
 
