@@ -171,6 +171,11 @@ def measurement_window(
         "frames": frames,
     }
 
+def site_value(value):
+    if value is None:
+        return None
+    return round(float(value), 4)
+
 def compact_measurement_window(window):
     frames = window["frames"]
 
@@ -208,8 +213,8 @@ def compact_measurement_window(window):
 
         for cell in frame["cells"]:
             if cell["valid"]:
-                u_values.append(cell["ugos_mps"])
-                v_values.append(cell["vgos_mps"])
+                u_values.append(site_value(cell["ugos_mps"]))
+                v_values.append(site_value(cell["vgos_mps"]))
             else:
                 u_values.append(None)
                 v_values.append(None)
@@ -248,8 +253,8 @@ def compact_measurement_window(window):
         compact_frames.append(compact_frame)
 
     return {
-        "latitudes": latitudes,
-        "longitudes": longitudes,
+        "latitudes": [site_value(v) for v in latitudes],
+        "longitudes": [site_value(v) for v in longitudes],
         "frames": compact_frames,
     }
 
@@ -498,17 +503,21 @@ for slice_name, slice_data in slices.items():
                 "rank": rank,
                 "start": failure["start"],
                 "end": failure["end"],
-                "latitude": failure["latitude"],
-                "longitude": failure["longitude"],
-                "persistence_vector_miss_mps": (
+                "latitude": site_value(failure["latitude"]),
+                "longitude": site_value(failure["longitude"]),
+                "persistence_vector_miss_mps": site_value(
                     failure["persistence_vector_miss_mps"]
                 ),
-                "measurement_at_t": (
-                    failure["measurement_at_t"]
-                ),
-                "measurement_at_t_plus_24h": (
-                    failure["measurement_at_t_plus_24h"]
-                ),
+                "measurement_at_t": {
+                    key: site_value(value)
+                    for key, value in failure["measurement_at_t"].items()
+                },
+                "measurement_at_t_plus_24h": {
+                    key: site_value(value)
+                    for key, value in failure[
+                        "measurement_at_t_plus_24h"
+                    ].items()
+                },
                 "measurement_window": compact_measurement_window(
                     failure["measurement_window"]
                 ),
